@@ -15,6 +15,7 @@ import requests
 import enum
 
 from api.accounts import Account
+from api.call import Call
 
 from exceptions import BaseCallRailException
 
@@ -101,9 +102,8 @@ class CallRail():
             try:
                 response = requests.get(
                     response.json()["next_page"],
-                    headers=self.auth_header
-                    params=self.base_relative_pagination_params
-                )
+                    headers=self.auth_header,
+                    params=self.base_relative_pagination_params)
                 response.raise_for_status()
             except requests.HTTPError as e:
                 raise BaseCallRailException(
@@ -273,7 +273,8 @@ class CallRail():
         response.raise_for_status()
         
     ##############################
-    #     
+    # Accounts
+    ##############################
 
 
     def list_accounts(
@@ -308,8 +309,10 @@ class CallRail():
         )
 
         # If the response is a list, return a list of Account objects.
-        if isinstance(accounts, list):
+        if isinstance(accounts, list) and len(accounts) > 1:
             return [Account(account, parent=self) for account in accounts]
+        elif isinstance(accounts, list) and len(accounts) == 1:
+            return Account(accounts[0], parent=self)
         # If the response is a dict, return a single Account object.
         elif isinstance(accounts, dict):
             return Account(accounts, parent=self)
@@ -331,15 +334,10 @@ class CallRail():
         if fields:
             params |= fields
 
-        return Account(self._get(
-            endpoint = 'a',
-            path = f'/{account_id}.json',
-            response_data_key='account'
-        ), parent=self)
-    
-
-    ##############################
-    # Calls
-    ##############################
-
-    def list_calls()
+        return Account(
+                self._get(
+                    endpoint = 'a',
+                    path = f'/{account_id}.json',
+                    response_data_key='account'
+                ), 
+            parent=self)
