@@ -1,6 +1,6 @@
 from setuptools import setup
 
-readme = open('README.md', 'r').read()
+readme = open('readme.md', 'r').read()
 
 setup(
     name='pycallrail',
