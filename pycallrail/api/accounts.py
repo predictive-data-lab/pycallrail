@@ -5,13 +5,15 @@ import logging
 import datetime as dt
 
 if TYPE_CHECKING:
-    from ..callrail import *
+    from ..callrail import CallRail
 
+from callrail import *
 from .call import *
 from .tag import *
 from .companies import *
 from .form_submissions import *
 from .textmessage import *
+
 class Account:
     """
     Represents an account in CallRail

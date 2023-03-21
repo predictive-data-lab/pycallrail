@@ -14,8 +14,8 @@ import aiohttp
 import requests
 import enum
 
-from api.accounts import Account
-from api.call import Call
+from api.accounts import *
+from api.call import *
 
 from exceptions import BaseCallRailException
 
@@ -168,8 +168,9 @@ class CallRail():
         if self.request_delay:
             time.sleep(self.request_delay)
         url = urljoin(BASE_URL, endpoint)
+        print(url)
         if path:
-            url = urljoin(url, path)
+            url = f'{url}{path}'
         if params:
             first_response = requests.get(
                 url,
@@ -182,6 +183,15 @@ class CallRail():
                 headers=self.auth_header
             )
         first_response.raise_for_status()
+
+        # check if pagination is needed
+        if "page" not in first_response.json() \
+            or "next_page" not in first_response.json():
+            try:
+                return first_response.json()[response_data_key]
+            except KeyError:
+                return first_response.json()
+
         if pagination_type == PaginationType.RELATIVE:
             return self._relative_paginator(
                 response=first_response,
