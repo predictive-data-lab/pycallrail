@@ -1,8 +1,10 @@
 import unittest
 import callrail as crl
-from config import api_key
+import os
 from api.call import Call
 from unittest import mock
+
+api_key = os.environ.get("API_KEY")
 
 class TestCallAccountMethods(unittest.TestCase):
     """

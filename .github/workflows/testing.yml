@@ -1,6 +1,9 @@
-name: Test
+name: UnitTest
 
 on: [push, pull_request]
+
+env:
+  API_KEY: ${{ secrets.TESTING_API_KEY }}
 
 jobs:
   test:
@@ -21,6 +24,12 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
-      # Step 4: Run the tests
+        
+      # Step 4: Set up environment variables
+      - name: Environment variables
+        run: |
+          echo "API_KEY=${API_KEY}" >> $GITHUB_ENV
+    
+      # Step 5: Run the tests
       - name: Run tests
         run: python -m unittest discover -s pycallrail -v
