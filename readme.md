@@ -1,7 +1,6 @@
 # CallRail API for Python
 
----------------------------
-
+[![Tests](https://github.com/kharigardner/pycallrail/actions/workflows/testing.yml/badge.svg?branch=main)](https://github.com/kharigardner/pycallrail/actions/workflows/testing.yml) 
 ## Overview
 
 I created this library to make it easier to integrate the CallRail API into Python applications. It is a wrapper around the CallRail API, which is documented [here](https://apidocs.callrail.com/).
