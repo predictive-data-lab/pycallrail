@@ -2,6 +2,7 @@ import unittest
 import callrail as crl
 from config import api_key
 from api.call import Call
+from unittest import mock
 
 class TestCallAccountMethods(unittest.TestCase):
     """
@@ -22,7 +23,7 @@ class TestCallAccountMethods(unittest.TestCase):
         with self.assertRaises(Exception):
             crl.CallRail()
     
-    @mock.patch('callrail.CallRail.list_calls')
+    @mock.patch('api.accounts.Account.list_calls')
     def test_list_calls(self, mock_list_calls):
         mock_list_calls.return_value = [
             Call(data=

@@ -5,6 +5,7 @@ import callrail as crl
 from config import api_key
 from api.accounts import Account
 from unittest import mock
+
 class TestBase(unittest.TestCase):
     def setUp(self):
         self.cr = crl.CallRail(api_key=api_key)
