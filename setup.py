@@ -1,8 +1,5 @@
 from setuptools import setup
 import os
-this_directory = os.path.dirname(__file__)
-readme_file = os.path.join(this_directory, 'readme.md')
-readme = open(readme_file, encoding='utf-8').read()
 
 setup(
     name='pycallrail',
