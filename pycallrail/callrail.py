@@ -85,7 +85,7 @@ class CallRail():
             self,
             response: requests.Response,
             response_data_key: str = None
-    ) -> Iterable | AsyncIterable | Generator | AsyncGenerator:
+    ) -> Iterable:
         """
         Base relative pagination function for the CallRail API.
         """
@@ -120,7 +120,7 @@ class CallRail():
             self,
             response: requests.Response,
             response_data_key: str = None
-    ) -> Iterable | AsyncIterable | Generator | AsyncGenerator:
+    ) -> Iterable :
         """
         Base offset pagination function for the CallRail API.
         """
