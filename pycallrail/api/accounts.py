@@ -98,7 +98,7 @@ class Account:
         """
         account_id = self.id
 
-        pagination_type: PaginationType = kwargs.get('pagination_type', PaginationType.RELATIVE)
+        pagination_type = kwargs.get('pagination_type', "RELATIVE")
 
         sorting: dict = kwargs.get('sorting', None)
         filtering: dict = kwargs.get('filtering', None)
