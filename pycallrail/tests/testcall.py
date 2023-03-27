@@ -1,10 +1,10 @@
 import unittest
-import callrail as crl
+import pycallrail.callrail as crl
 import os
-from api.call import Call
+from pycallrail.api.call import Call
 from unittest import mock
 
-api_key = os.environ.get("API_KEY")
+api_key = os.environ.get("API_KEY", "4a0c4ee1afda7b3872c098834c0fbe0f")
 
 class TestCallAccountMethods(unittest.TestCase):
     """
@@ -25,7 +25,7 @@ class TestCallAccountMethods(unittest.TestCase):
         with self.assertRaises(Exception):
             crl.CallRail()
     
-    @mock.patch('api.accounts.Account.list_calls')
+    @mock.patch('pycallrail.api.accounts.Account.list_calls')
     def test_list_calls(self, mock_list_calls):
         mock_list_calls.return_value = [
             Call(data=

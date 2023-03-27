@@ -7,7 +7,7 @@ from enum import Enum
 if TYPE_CHECKING:
     from ..callrail import *
 
-from accounts import *
+from pycallrail.api.accounts import *
 
 class FormSubmission:
     """

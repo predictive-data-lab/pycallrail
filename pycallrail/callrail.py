@@ -14,10 +14,10 @@ import aiohttp
 import requests
 import enum
 
-from .api.accounts import *
-from .api.call import *
+from pycallrail.api.accounts import *
+from pycallrail.api.call import *
 
-from exceptions import BaseCallRailException
+from pycallrail.exceptions import BaseCallRailException
 
 BASE_URL = "https://api.callrail.com/v3/"
 

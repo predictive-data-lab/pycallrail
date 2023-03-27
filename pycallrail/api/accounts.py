@@ -5,14 +5,14 @@ import logging
 import datetime as dt
 
 if TYPE_CHECKING:
-    from ..callrail import CallRail
+    from pycallrail.callrail import CallRail
 
-from ..callrail import *
-from call import *
-from tag import *
-from companies import *
-from form_submissions import *
-from textmessage import *
+from pycallrail.callrail import *
+from pycallrail.api.call import *
+from pycallrail.api.tag import *
+from pycallrail.api.companies import *
+from pycallrail.api.form_submissions import *
+from pycallrail.api.textmessage import *
 
 class Account:
     """
