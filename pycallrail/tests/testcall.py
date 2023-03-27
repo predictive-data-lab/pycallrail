@@ -75,8 +75,5 @@ class TestCallAccountMethods(unittest.TestCase):
         self.assertIsInstance(calls[0], crl.Call)
         self.assertIsInstance(calls[1], crl.Call)
         self.assertEqual(calls[0].agent_email, "gil@televised.com")
-
-    
-    
-
-    
+        self.assertEqual(calls[0].id, "CAL8154748ae6bd4e278a7cddd38a662f4f")
+        print("this works")

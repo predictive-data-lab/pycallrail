@@ -110,7 +110,23 @@ class Call:
         
     def __extract_from_data(self):
         # these are the fields needed to create a Call object
-        self.caller_id = self.as_dict.get("caller_id")
+        self.answered = self.as_dict.get("answered", None)
+        self.business_phone_number = self.as_dict.get("business_phone_number", None)
+        self.customer_city = self.as_dict.get("customer_city", None)
+        self.customer_country = self.as_dict.get("customer_country", None)
+        self.customer_name = self.as_dict.get("customer_name", None)
+        self.customer_phone_number = self.as_dict.get("customer_phone_number", None)
+        self.customer_state = self.as_dict.get("customer_state", None)
+        self.direction = self.as_dict.get("direction", None)
+        self.duration = self.as_dict.get("duration", None)
+        self.id = self.as_dict.get("id", None)
+        self.recording = self.as_dict.get("recording", None)
+        self.recording_duration = self.as_dict.get("recording_duration", None)
+        self.recording_player = self.as_dict.get("recording_player", None)
+        self.start_time = self.as_dict.get("start_time", None)
+        self.tracking_phone_number = self.as_dict.get("tracking_phone_number", None)
+        self.voicemail = self.as_dict.get("voicemail", None)
+        
 
 
         # Optional Fields (User Requested)
