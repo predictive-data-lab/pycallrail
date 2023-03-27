@@ -3,7 +3,7 @@ import os
 
 setup(
     name='pycallrail',
-    version='0.5.02',
+    version='0.5.3',
     author = 'Khari Gardner',
     author_email = 'khgardner@proton.me',
     description= "Unofficial Python wrapper for the CallRail API",
