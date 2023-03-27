@@ -14,8 +14,8 @@ import aiohttp
 import requests
 import enum
 
-from api.accounts import *
-from api.call import *
+from .api.accounts import *
+from .api.call import *
 
 from exceptions import BaseCallRailException
 
