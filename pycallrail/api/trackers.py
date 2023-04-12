@@ -7,7 +7,8 @@ from enum import Enum
 if TYPE_CHECKING:
     from pycallrail.callrail import *
 
-from pycallrail.api.accounts import *
+from pycallrail.api.accounts import Account
+from pycallrail.api.companies import Company
 
 class Tracker:
     """
@@ -61,3 +62,11 @@ class Tracker:
         self.disabled_at = dt.datetime.fromisoformat(self.as_dict.get('disabled_at')) if self.as_dict.get('disabled_at') else None
         self.campaign_name = self.as_dict.get('campaign_name') or None
         self.swap_targets = self.as_dict.get('swap_targets') or None
+
+    def disable(self) -> None:
+        """
+        Disable a tracker.
+        """
+        self.parent.parent._delete(f'/v3/a/{self.parent.id}/trackers/{self.id}')
+        self.status = 'disabled'
+
