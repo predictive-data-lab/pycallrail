@@ -13,6 +13,7 @@ from pycallrail.api.tag import *
 from pycallrail.api.companies import *
 from pycallrail.api.form_submissions import *
 from pycallrail.api.textmessage import *
+from pycallrail.api.trackers import *
 
 class Account:
     """
@@ -539,9 +540,59 @@ class Account:
 
         return TextMessageThread(text_message_thread, parent=self)
 
-        
-            
+    ##############################
+    # Trackers
+    ##############################
 
+    def list_trackers(
+            self,
+            **kwargs
+    ) -> List[Tracker] | None:
+        """
+        List trackers for an account.
+        """
+        params = {
+            key: value
+            for key, value in kwargs.items()
+            if key in ['fields', 'sorting', 'filtering', 'searching']
+        }
+        
+        if self.parent.request_delay:
+            time.sleep(self.parent.request_delay)
+        
+        trackers = self.parent._get(
+            endpoint='a',
+            path=f'/{self.id}/trackers.json',
+            params=params,
+            response_data_key='trackers'
+        )
+
+        return [Tracker(self, tracker) for tracker in trackers] if trackers else None
+
+    def get_tracker(
+            self,
+            tracker_id: str,
+            **kwargs
+    ) -> Tracker | None:
+        """
+        Get a tracker.
+        """
+        params = {
+            key: value
+            for key, value in kwargs.items()
+            if key in ['fields']
+        }
+        
+        if self.parent.request_delay:
+            time.sleep(self.parent.request_delay)
+        
+        tracker = self.parent._get(
+            endpoint='a',
+            path=f'/{self.id}/trackers/{tracker_id}.json',
+            params=params
+        )
+
+        return Tracker(self, tracker) if tracker else None
 
 ######################################################
 
