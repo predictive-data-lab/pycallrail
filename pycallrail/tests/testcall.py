@@ -118,3 +118,25 @@ class TestCallAccountMethods(unittest.TestCase):
                     "direction": "inbound",
                     "duration": 4,
                     "id": "CAL8154748ae6bd4e278a7cddd38a662f4f",
+                    "recording": "https://api.callrail.com/v3/a/227799611/calls/111222333/recording.json",
+                    "recording_duration": "27"
+                }, parent=self.account)
+            
+            # Update the call, but not actually in the system
+            call = Call(data=
+                {
+                    "answered": False,
+                    "business_phone_number": None,
+                    "customer_city": "Denver",
+                    "customer_country": "US",
+                    "customer_name": "RUEGSEGGER SIMO",
+                    "customer_phone_number": "+13036231131",
+                    "customer_state": "CO",
+                    "direction": "inbound",
+                    "duration": 4,
+                    "id": "CAL8154748ae6bd4e278a7cddd38a662f4f",
+                    "recording": "https://api.callrail.com/v3/a/227799611/calls/111222333/recording.json",
+                    "recording_duration": "27"
+                }, parent=self.account)
+            
+            #TODO: finish writing this test

@@ -61,5 +61,3 @@ class Tracker:
         self.disabled_at = dt.datetime.fromisoformat(self.as_dict.get('disabled_at')) if self.as_dict.get('disabled_at') else None
         self.campaign_name = self.as_dict.get('campaign_name') or None
         self.swap_targets = self.as_dict.get('swap_targets') or None
-
-    def
