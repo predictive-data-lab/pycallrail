@@ -287,7 +287,7 @@ class CallRail():
     def list_accounts(
             self,
             **kwargs
-    ) -> List[Account]:  # sourcery skip: remove-none-from-default-get
+    ) -> List[Account] | Account:  # sourcery skip: remove-none-from-default-get
         """
         List all accounts for the authenticated user.
         """
