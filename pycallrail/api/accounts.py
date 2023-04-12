@@ -13,7 +13,7 @@ from pycallrail.api.tag import *
 from pycallrail.api.companies import *
 from pycallrail.api.form_submissions import *
 from pycallrail.api.textmessage import *
-from pycallrail.api.trackers import Tracker
+from pycallrail.api.trackers import *
 
 class Account:
     """

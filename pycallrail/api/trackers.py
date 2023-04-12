@@ -7,8 +7,8 @@ from enum import Enum
 if TYPE_CHECKING:
     from pycallrail.callrail import *
 
-from pycallrail.api.accounts import Account
-from pycallrail.api.companies import Company
+from pycallrail.api.accounts import *
+from pycallrail.api.companies import *
 
 class Tracker:
     """
