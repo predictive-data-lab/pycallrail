@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union, ClassVar
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union, ClassVar, cast
 import logging
 import datetime as dt
 from enum import Enum
 
-if TYPE_CHECKING:
-    from pycallrail.callrail import *
-
-from pycallrail.api.accounts import *
+from . import accounts
+from .. import callrail
 
 # Enums for Call
 class CallType(Enum):
@@ -24,29 +22,29 @@ class Call:
     """
     Represents a CallRail Call
     """
-    parent: ClassVar[Account]
+    parent: accounts.Account
 
 
     
-    answered: bool
+    answered: Optional[bool]
     business_phone_number: str
-    customer_city: str
-    customer_country: str
-    customer_name: str
+    customer_city: Optional[str]
+    customer_country: Optional[str]
+    customer_name: Optional[str]
     customer_phone_number: str
-    customer_state: str
+    customer_state: Optional[str]
     direction: str
     duration: int
     id: int
-    recording: str
-    recording_duration: str
-    recording_player: str
+    recording: Optional[str]
+    recording_duration: Optional[str]
+    recording_player: Optional[str]
     start_time: dt.datetime
     tracking_phone_number: str
-    voicemail: bool
+    voicemail: Optional[bool]
     
     # Optional Fields (User Requested)
-    call_type: Optional[CallType | str]
+    call_type: Optional[Union[CallType,str]]
     company_id: Optional[str]
     company_name: Optional[str]
     company_time_zone: Optional[str]
@@ -101,18 +99,39 @@ class Call:
 
     def __init__(
             self,
-            data: Optional[dict],
-            parent: Account):
+            data: Dict[str, Any],
+            parent: accounts.Account) -> None:
+        # check if the parent is an Account
+        self.REQUIRED_FIELDS: list[str] = [
+            'business_phone_number',
+            'customer_phone_number',
+            'id',
+            'caller_id',
+            'recording_enabled',
+            'outbound_greeting_recording_url',
+            'outbound_greeting_text',
+            'agent_id'
+        ]
+        if not isinstance(parent, accounts.Account):
+            raise TypeError("parent must be an Account")
+        
+        if not data:
+            raise ValueError("data must not be empty")
+
         self.parent = parent
-        if data is not None:
-            self.as_dict = data
-            self.__extract_from_data()
+
+        # assert that the required fields are present
+        if any(field not in data for field in self.REQUIRED_FIELDS):
+            raise ValueError(f"Missing required fields: {set(self.REQUIRED_FIELDS) - set(data.keys())}")
+
+        self.as_dict = data
+        self.__extract_from_data()
         
     def __extract_from_data(self):
         # these are the fields needed to create a Call object
-        self.answered = self.as_dict.get("answered", None)
-        self.business_phone_number = self.as_dict.get("business_phone_number", None)
-        self.customer_city = self.as_dict.get("customer_city", None)
+        self.answered = self.as_dict.get("answered") # type: ignore
+        self.business_phone_number = self.as_dict.get("business_phone_number") # type: ignore
+        self.customer_city = self.as_dict.get("customer_city") # type: ignore
         self.customer_country = self.as_dict.get("customer_country", None)
         self.customer_name = self.as_dict.get("customer_name", None)
         self.customer_phone_number = self.as_dict.get("customer_phone_number", None)
@@ -123,7 +142,7 @@ class Call:
         self.recording = self.as_dict.get("recording", None)
         self.recording_duration = self.as_dict.get("recording_duration", None)
         self.recording_player = self.as_dict.get("recording_player", None)
-        self.start_time = self.as_dict.get("start_time", None)
+        self.start_time = self.as_dict.get("start_time") # type: ignore
         self.tracking_phone_number = self.as_dict.get("tracking_phone_number", None)
         self.voicemail = self.as_dict.get("voicemail", None)
         
@@ -185,25 +204,36 @@ class Call:
 
     def update(
             self,
-            update: dict):
+            update: dict) -> None:
+        
+        if update is None or not isinstance(update, dict):
+            raise ValueError("Invalid values for update data")
+        
+        if update == {}:
+            raise KeyError("No data to update")
+        
+
         """Updates the current call object with the latest data from the API"""
-        self.as_dict = self.parent.parent._put(
-            endpoint = 'a',
-            path = f'/{self.parent.id}/calls/{self.id}.json',
-            data = update
-        )
-        self.__extract_from_data()
+        try:
+            self.as_dict = cast(dict,self.parent.parent._put(
+                endpoint = 'a',
+                path = f'/{self.parent.id}/calls/{self.id}.json',
+                data = update
+            ))
+            self.__extract_from_data()
+        except ValueError as e:
+            raise ValueError(f"Invalid values for update data, API Rejected: {e}")
     
-    def _refresh(self):
+    def _refresh(self) -> None:
         """Refreshes the current call object with the latest data from the API"""
-        self.as_dict: dict = self.parent.get_call(self.id, obj_or_dict='dict')
+        self.as_dict: dict = cast(dict,self.parent.get_call(self.id, obj_or_dict='dict')) # type: ignore
         self.__extract_from_data()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'Call({self.id})'
     
-    def __str__(self):
+    def __str__(self) -> str:
         return f'Call({self.id})'
     
-    def __dict__(self):
+    def __dict__(self) -> dict: # type: ignore
         return self.as_dict

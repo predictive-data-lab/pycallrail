@@ -13,7 +13,7 @@ class FormSubmission:
     """
     Represents a Form Submission in CallRail.
     """
-    parent: ClassVar[Account]
+    parent: Account
 
     id: str
     company_id: str
@@ -89,11 +89,11 @@ class FormSubmission:
         """
         Update a form submission in CallRail.
         """
-        self.as_dict = self.parent.parent._put(
+        self.as_dict = cast(dict,self.parent.parent._put(
             endpoint = 'a',
             path = f'/{self.parent.id}/form_submissions/{self.id}.json',
             data = update_data
-        )
+        ))
         self.__extract_from_data()
 
     

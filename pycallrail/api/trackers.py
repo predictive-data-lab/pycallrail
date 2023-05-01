@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Union, TYPE_CHECKING, ClassVar
+from typing import Any, Dict, List, Optional, Union, TYPE_CHECKING, ClassVar, cast
 import datetime as dt
 from enum import Enum
 
@@ -18,7 +18,7 @@ class Tracker:
     See more at: https://apidocs.callrail.com/#trackers
     """
 
-    parent: ClassVar[Account]
+    parent: Account
 
     id: str
     name: str
@@ -37,36 +37,39 @@ class Tracker:
     campaign_name: Optional[str]
     swap_targets: Optional[List[str]]
 
-    def __init__(self, parent: Account, data: Dict[str, Any]):
+    def __init__(self, parent: Account, data: Dict[str, Any]) -> None:
         self.parent = parent
-        if data is not None:
-            self.as_dict = data
-            self.__extract_from_data()
-        else:
-            raise ValueError('Did you really try to create a Tracker with no data?')
+        self.as_dict: Dict[str, Union[str, bool]] = data
+        self.__extract_from_data()
         
     def __extract_from_data(self) -> None:
-        self.id = self.as_dict.get('id')
-        self.name = self.as_dict.get('name')
-        self.type = self.as_dict.get('type')
-        self.destination_number = self.as_dict.get('destination_number')
-        self.status = self.as_dict.get('status')
-        self.tracking_number = self.as_dict.get('tracking_number')
-        self.whisper_message = self.as_dict.get('whisper_message')
-        self.sms_enabled = self.as_dict.get('sms_enabled')
-        self.sms_supported = self.as_dict.get('sms_supported')
-        self.company = Company(self.parent, self.as_dict.get('company'))
-        self.call_flow = self.as_dict.get('call_flow')
-        self.source = self.as_dict.get('source')
-        self.created_at = dt.datetime.fromisoformat(self.as_dict.get('created_at'))
-        self.disabled_at = dt.datetime.fromisoformat(self.as_dict.get('disabled_at')) if self.as_dict.get('disabled_at') else None
-        self.campaign_name = self.as_dict.get('campaign_name') or None
-        self.swap_targets = self.as_dict.get('swap_targets') or None
+        self.id = cast(str,self.as_dict.get('id'))
+        self.name = cast(str,self.as_dict.get('name'))
+        self.type = cast(str,self.as_dict.get('type'))
+        self.destination_number = cast(str,self.as_dict.get('destination_number'))
+        self.status = cast(str,self.as_dict.get('status'))
+        self.tracking_number = cast(str,self.as_dict.get('tracking_number'))
+        self.whisper_message = cast(str,self.as_dict.get('whisper_message'))
+        self.sms_enabled = bool(self.as_dict.get('sms_enabled'))
+        self.sms_supported = bool(self.as_dict.get('sms_supported'))
+        self.company = Company(parent = self.parent, data = cast(dict,self.as_dict.get('company')))
+        self.call_flow = cast(dict,self.as_dict.get('call_flow'))
+        self.source = cast(Dict[str, List[str]],self.as_dict.get('source'))
+        self.created_at = dt.datetime.fromisoformat(cast(str,self.as_dict.get('created_at')))
+        self.disabled_at = dt.datetime.fromisoformat(cast(Optional[str], self.as_dict.get('disabled_at'))) if self.as_dict.get('disabled_at') else None # type: ignore
+        self.campaign_name = cast(Optional[str],self.as_dict.get('campaign_name', None))
+        self.swap_targets = cast(Optional[List[str]], self.as_dict.get('swap_targets', None))
 
     def disable(self) -> None:
         """
         Disable a tracker.
         """
-        self.parent.parent._delete(f'/v3/a/{self.parent.id}/trackers/{self.id}')
-        self.status = 'disabled'
+        if self.status == 'disabled':
+            logging.warning(f'Tracker {self.id} is already disabled')
+            
+        
+        else:
+            self.parent.parent._delete(f'/v3/a/{self.parent.id}/trackers/{self.id}')
+            self.status = 'disabled'
+
 

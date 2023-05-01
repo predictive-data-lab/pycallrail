@@ -4,21 +4,21 @@ import logging
 import threading
 import time
 from dataclasses import dataclass
-from typing import Optional, Iterable, AsyncIterable,Generator, AsyncGenerator, ClassVar, Any, List
+from typing import Optional, Union, Iterable, cast
 from urllib.parse import urljoin, urlencode
 
 import aiohttp
 import requests
 import enum
 
-from pycallrail.api.accounts import *
-from pycallrail.api.call import *
+from pycallrail.api.accounts import Account
+from pycallrail.api.call import Call
 
 from pycallrail.exceptions import BaseCallRailException
 
 BASE_URL = "https://api.callrail.com/v3/"
 
-ERROR_CODES = {
+ERROR_CODES: dict[int, str] = {
     200: "OK - The request was succeeded.",
     201: "Created - The request was succeeded and a resource was created.",
     204: "No Content - The request was succeeded but there is no content to return.",
@@ -42,16 +42,16 @@ class PaginationType(enum.Enum):
     OFFSET = "offset"
 
 class CallRail():
-    logger = logging.getLogger(__name__)
+    logger: logging.Logger = logging.getLogger(__name__)
     
     def __init__(
             self,
             api_key: str,
             logging_level: int = logging.INFO,
-            request_delay: Optional[float or int] = None,
+            request_delay: Optional[Union[float,int]] = None,
             proxy: Optional[str] = None,
             **kwargs
-    ):
+    ) -> None:
         """
         
         The main class for the CallRail API. Allows for prgrammatic access to the CallRail API.
@@ -81,7 +81,7 @@ class CallRail():
     def _relative_paginator(
             self,
             response: requests.Response,
-            response_data_key: str = None
+            response_data_key: Optional[str] = None
     ) -> Iterable:
         """
         Base relative pagination function for the CallRail API.
@@ -116,14 +116,14 @@ class CallRail():
     def _offset_paginator(
             self,
             response: requests.Response,
-            response_data_key: str = None
+            response_data_key: Optional[str] = None
     ) -> Iterable :
         """
         Base offset pagination function for the CallRail API.
         """
-        pagination_list = []
-        current_page = response.json()['page']
-        total_pages = response.json()['total_pages']
+        pagination_list: list[None] = []
+        current_page: int = response.json()['page']
+        total_pages: int = response.json()['total_pages']
 
         while True:
             try:
@@ -134,7 +134,7 @@ class CallRail():
                 break
             try:
                 response = requests.get(
-                    response.json()["next_page"],
+                    f'{response.url}?page={current_page+1}',
                     headers=self.auth_header
                 )
                 response.raise_for_status()
@@ -152,24 +152,24 @@ class CallRail():
     
     def _get(
             self,
-            endpoint: str,
+            endpoint: Optional[str] = None,
             path: Optional[str] = None,
             params: Optional[dict] = None,
             response_data_key: Optional[str] = None,
             pagination_type: Optional[PaginationType] = PaginationType.OFFSET
-    ) -> Iterable[dict] | dict | None:
+    ) -> Union[Iterable[dict],dict,None]:
 
         """
         Base GET request function for the CallRail API.
         """
         if self.request_delay:
             time.sleep(self.request_delay)
-        url = urljoin(BASE_URL, endpoint)
+        url: str = urljoin(BASE_URL, endpoint)
         print(url)
         if path:
             url = f'{url}{path}'
         if params:
-            first_response = requests.get(
+            first_response: requests.Response = requests.get(
                 url,
                 headers=self.auth_header,
                 params=params
@@ -199,24 +199,22 @@ class CallRail():
                 response=first_response,
                 response_data_key=response_data_key
             )
+        else:
+            return first_response.json()[response_data_key]
         
     def _post(
             self,
-            endpoint: str,
+            endpoint: Optional[str] = None,
             path: Optional[str] = None,
             data: Optional[dict] = None,
             response_data_key: Optional[str] = None
-    ) -> Iterable[dict] | dict | None:
+    ) -> Union[Iterable[dict],dict,None]:
         """
         Base POST request function for the CallRail API.
         """
-        if self.request_delay:
-            time.sleep(self.request_delay)
-        url = urljoin(BASE_URL, endpoint)
-        if path:
-            url = urljoin(url, path)
+        url: str = self._extracted_from__delete_11(endpoint, path)
         if data:
-            response = requests.post(
+            response: requests.Response = requests.post(
                 url,
                 headers=self.auth_header,
                 data=data
@@ -235,17 +233,13 @@ class CallRail():
             path: Optional[str] = None,
             data: Optional[dict] = None,
             response_data_key: Optional[str] = None
-    ) -> Iterable[dict] | dict | None:
+    ) -> Union[Iterable[dict], dict, None]:
         """
         Base PUT request function for the CallRail API.
         """
-        if self.request_delay:
-            time.sleep(self.request_delay)
-        url = urljoin(BASE_URL, endpoint)
-        if path:
-            url = urljoin(url, path)
+        url: str = self._extracted_from__delete_11(endpoint, path)
         if data:
-            response = requests.put(
+            response: requests.Response = requests.put(
                 url,
                 headers=self.auth_header,
                 data=data
@@ -268,17 +262,31 @@ class CallRail():
         """
         Base DELETE request function for the CallRail API.
         """
-        if self.request_delay:
-            time.sleep(self.request_delay)
-        url = urljoin(BASE_URL, endpoint)
-        if path:
-            url = urljoin(url, path)
-        response = requests.delete(
+        url: str = self._extracted_from__delete_11(endpoint, path)
+        response: requests.Response = requests.delete(
             url,
             headers=self.auth_header
         )
         response.raise_for_status()
-        
+
+    # TODO Rename this here and in `_post`, `_put` and `_delete`
+    def _extracted_from__delete_11(self, endpoint, path) -> str:
+        if self.request_delay:
+            time.sleep(self.request_delay)
+        result: str = urljoin(BASE_URL, endpoint)
+
+        if path:
+            # Ensure the endpoint has a trailing slash
+            if not result.endswith('/'):
+                result += '/'
+
+            # Ensure the path does not start with a slash
+            if path.startswith('/'):
+                path = path[1:]
+
+            result = urljoin(result, path)
+
+        return result        
     ##############################
     # Accounts
     ##############################
@@ -287,7 +295,7 @@ class CallRail():
     def list_accounts(
             self,
             **kwargs
-    ) -> List[Account] | Account:  # sourcery skip: remove-none-from-default-get
+    ) -> Union[list[Account], Account]:  # sourcery skip: remove-none-from-default-get
         """
         List all accounts for the authenticated user.
         """
@@ -296,7 +304,7 @@ class CallRail():
         searching: dict = kwargs.get('searching', None)
         fields: dict = kwargs.get('fields', None)
 
-        params = {}
+        params: dict = {}
 
         if sorting:
             params |= sorting
@@ -321,10 +329,10 @@ class CallRail():
         elif isinstance(accounts, list) and len(accounts) == 1:
             return Account(accounts[0], parent=self)
         # If the response is a dict, return a single Account object.
-        elif isinstance(accounts, dict):
+        elif isinstance(accounts, dict) and accounts != {}:
             return Account(accounts, parent=self)
         else:
-            return None
+            raise AttributeError('No accounts found')
         
     def get_account(
             self,
@@ -336,15 +344,15 @@ class CallRail():
         """
         fields: dict = kwargs.get('fields', None)
 
-        params = {}
+        params: dict = {}
 
         if fields:
             params |= fields
 
         return Account(
-                self._get(
+                cast(dict,self._get(
                     endpoint = 'a',
                     path = f'/{account_id}.json',
                     response_data_key='account'
-                ), 
+                )),
             parent=self)

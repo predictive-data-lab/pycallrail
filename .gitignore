@@ -3,3 +3,6 @@ pycallrail/config.py
 __pycache__
 *.egg-info
 dist
+*.vscode
+*.pytest_cache
+*.mypy_cache

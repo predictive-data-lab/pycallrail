@@ -1,19 +1,16 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union, ClassVar
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union, ClassVar, get_type_hints
 import datetime as dt
 from enum import Enum
 
-if TYPE_CHECKING:
-    from ..callrail import *
-
-from pycallrail.api.accounts import *
+from . import accounts
 
 class Company:
     """
     A class representing a CallRail company.
     """
-    parent: ClassVar[Account]
+    parent: accounts.Account
 
     id: str
     name: str   
@@ -34,33 +31,49 @@ class Company:
     # deprecated
     keyword_spotting_enabled: Optional[bool]
     form_capture: Optional[bool]
-    verrified_caller_ids: Optional[List[dict]]
+    verified_caller_ids: Optional[List[dict]]
 
-    def __init__(self, data: Dict[str, Any], parent: Account):
+    _REQUIRED_FIELDS: ClassVar[List[str]] = [
+        'id',
+        'name',
+        'status',
+        'time_zone',
+        'created_at',
+    ]
+    def __init__(self, data: Optional[dict], parent: accounts.Account):
+        
+        
+        if not isinstance(parent, accounts.Account):
+            raise TypeError("parent must be an instance of Account")
+        
+        if data is None:
+            raise ValueError("data must not be None")
+        
+        
+
         self.parent = parent
-        if data is not None:
-            self.as_dict = data
-            self.__extract_from_data()
+        self.as_dict = data
+        self.__extract_from_data()
         
     def __extract_from_data(self):
-        self.id = self.as_dict.get('id', None)
-        self.name = self.as_dict.get('name', None)
-        self.status = self.as_dict.get('status', None)
-        self.time_zone = self.as_dict.get('time_zone', None)
-        self.created_at = dt.datetime.fromisoformat(self.as_dict.get('created_at', None))
-        self.disabled_at = dt.datetime.fromisoformat(self.as_dict.get('disabled_at', None)) if self.as_dict.get('disabled_at', None) else None
-        self.dni_active = self.as_dict.get('dni_active', None)
-        self.script_url = self.as_dict.get('script_url', None)
-        self.callscore_enabled = self.as_dict.get('callscore_enabled', None)
-        self.lead_scoring_enabled = self.as_dict.get('lead_scoring_enabled', None)
-        self.swap_exclude_jquery = self.as_dict.get('swap_exclude_jquery', None)
-        self.swap_ppc_override = self.as_dict.get('swap_ppc_override', None)
-        self.swap_landing_override = self.as_dict.get('swap_landing_override', None)
-        self.swap_cookie_duration = self.as_dict.get('swap_cookie_duration', None)
-        self.callscribe_enabled = self.as_dict.get('callscribe_enabled', None)
-        self.keyword_spotting_enabled = self.as_dict.get('keyword_spotting_enabled', None)
-        self.form_capture = self.as_dict.get('form_capture', None)
-        self.verrified_caller_ids = self.as_dict.get('verrified_caller_ids', None)
+        self.id = self.as_dict.get('id', None) # type: ignore
+        self.name = self.as_dict.get('name', None) # type: ignore
+        self.status = self.as_dict.get('status', None) # type: ignore
+        self.time_zone = self.as_dict.get('time_zone', None) # type: ignore
+        self.created_at = dt.datetime.fromisoformat(self.as_dict.get('created_at')) if self.as_dict.get('created_at', None) else None # type: ignore
+        self.disabled_at = dt.datetime.fromisoformat(self.as_dict.get('disabled_at')) if self.as_dict.get('disabled_at', None) else None # type: ignore
+        self.dni_active = self.as_dict.get('dni_active', None) # type: ignore
+        self.script_url = self.as_dict.get('script_url', None) # type: ignore
+        self.callscore_enabled = self.as_dict.get('callscore_enabled', None) # type: ignore
+        self.lead_scoring_enabled = self.as_dict.get('lead_scoring_enabled', None) # type: ignore
+        self.swap_exclude_jquery = self.as_dict.get('swap_exclude_jquery', None) # type: ignore
+        self.swap_ppc_override = self.as_dict.get('swap_ppc_override', None) # type: ignore
+        self.swap_landing_override = self.as_dict.get('swap_landing_override', None) # type: ignore
+        self.swap_cookie_duration = self.as_dict.get('swap_cookie_duration', None) # type: ignore
+        self.callscribe_enabled = self.as_dict.get('callscribe_enabled', None) # type: ignore
+        self.keyword_spotting_enabled = self.as_dict.get('keyword_spotting_enabled', None) # type: ignore
+        self.form_capture = self.as_dict.get('form_capture', None) # type: ignore
+        self.verified_caller_ids = self.as_dict.get('verified_caller_ids', None) # type: ignore
 
     def update(
             self,
@@ -69,6 +82,9 @@ class Company:
         """
         Update the company.
         """
+        if update_data is None:
+            raise ValueError("update_data must not be None")
+        
         self.as_dict = self.parent.parent._put(
             endpoint = 'a',
             path = f'/{self.parent.id}/companies/{self.id}.json',
@@ -86,12 +102,12 @@ class Company:
         )
     
     def __repr__(self) -> str:
-        return f"Company(id={self.id}, name={self.name}, status={self.status}, time_zone={self.time_zone}, created_at={self.created_at}, disabled_at={self.disabled_at}, dni_active={self.dni_active}, script_url={self.script_url}, callscore_enabled={self.callscore_enabled}, lead_scoring_enabled={self.lead_scoring_enabled}, swap_exclude_jquery={self.swap_exclude_jquery}, swap_ppc_override={self.swap_ppc_override}, swap_landing_override={self.swap_landing_override}, swap_cookie_duration={self.swap_cookie_duration}, callscribe_enabled={self.callscribe_enabled}, keyword_spotting_enabled={self.keyword_spotting_enabled}, form_capture={self.form_capture}, verrified_caller_ids={self.verrified_caller_ids})"
+        return f"Company(id={self.id}, name={self.name}, status={self.status}, time_zone={self.time_zone}, created_at={self.created_at}, disabled_at={self.disabled_at}, dni_active={self.dni_active}, script_url={self.script_url}, callscore_enabled={self.callscore_enabled}, lead_scoring_enabled={self.lead_scoring_enabled}, swap_exclude_jquery={self.swap_exclude_jquery}, swap_ppc_override={self.swap_ppc_override}, swap_landing_override={self.swap_landing_override}, swap_cookie_duration={self.swap_cookie_duration}, callscribe_enabled={self.callscribe_enabled}, keyword_spotting_enabled={self.keyword_spotting_enabled}, form_capture={self.form_capture}, verrified_caller_ids={self.verified_caller_ids})"
     
     def __str__(self) -> str:
-        return f"Company(id={self.id}, name={self.name}, status={self.status}, time_zone={self.time_zone}, created_at={self.created_at}, disabled_at={self.disabled_at}, dni_active={self.dni_active}, script_url={self.script_url}, callscore_enabled={self.callscore_enabled}, lead_scoring_enabled={self.lead_scoring_enabled}, swap_exclude_jquery={self.swap_exclude_jquery}, swap_ppc_override={self.swap_ppc_override}, swap_landing_override={self.swap_landing_override}, swap_cookie_duration={self.swap_cookie_duration}, callscribe_enabled={self.callscribe_enabled}, keyword_spotting_enabled={self.keyword_spotting_enabled}, form_capture={self.form_capture}, verrified_caller_ids={self.verrified_caller_ids})"
+        return f"Company(id={self.id}, name={self.name}, status={self.status}, time_zone={self.time_zone}, created_at={self.created_at}, disabled_at={self.disabled_at}, dni_active={self.dni_active}, script_url={self.script_url}, callscore_enabled={self.callscore_enabled}, lead_scoring_enabled={self.lead_scoring_enabled}, swap_exclude_jquery={self.swap_exclude_jquery}, swap_ppc_override={self.swap_ppc_override}, swap_landing_override={self.swap_landing_override}, swap_cookie_duration={self.swap_cookie_duration}, callscribe_enabled={self.callscribe_enabled}, keyword_spotting_enabled={self.keyword_spotting_enabled}, form_capture={self.form_capture}, verrified_caller_ids={self.verified_caller_ids})"
     
-    def __dict__(self) -> Dict[str, Any]:
+    def __dict__(self) -> Dict[str, Any]: # type: ignore
         return {
             "id": self.id,
             "name": self.name,
@@ -110,6 +126,6 @@ class Company:
             "callscribe_enabled": self.callscribe_enabled,
             "keyword_spotting_enabled": self.keyword_spotting_enabled,
             "form_capture": self.form_capture,
-            "verrified_caller_ids": self.verrified_caller_ids
+            "verrified_caller_ids": self.verified_caller_ids
         }
     

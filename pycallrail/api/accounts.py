@@ -1,19 +1,19 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union, cast, Mapping
 import logging
 import datetime as dt
 
 if TYPE_CHECKING:
     from pycallrail.callrail import CallRail
 
-from pycallrail.callrail import *
-from pycallrail.api.call import *
-from pycallrail.api.tag import *
-from pycallrail.api.companies import *
-from pycallrail.api.form_submissions import *
-from pycallrail.api.textmessage import *
-from pycallrail.api.trackers import *
+from pycallrail.api.call import Call
+from pycallrail.api.tag import Tag
+from pycallrail.api.companies import Company
+from pycallrail.api.form_submissions import FormSubmission
+from pycallrail.api.textmessage import TextMessage, TextMessageThread
+from pycallrail.api.trackers import Tracker
+import time
 
 class Account:
     """
@@ -32,25 +32,25 @@ class Account:
             parent: CallRail):
         self.parent = parent
         if data is not None:
-            self.as_dict = data
+            self.as_dict: dict[str, Any] = data
             self.__extract_from_data()
 
     def __extract_from_data(self):
-        self.id = self.as_dict.get("id")
-        self.name = self.as_dict.get("name")
-        self.outbound_recording_enabled = self.as_dict.get("outbound_recording_enabled")
-        self.hipaa_account = self.as_dict.get("hipaa_account")
+        self.id = cast(str,self.as_dict.get("id"))
+        self.name = cast(str,self.as_dict.get("name"))
+        self.outbound_recording_enabled = cast(bool,self.as_dict.get("outbound_recording_enabled"))
+        self.hipaa_account = cast(bool, self.as_dict.get("hipaa_account"))
         self.numeric_id = self.as_dict.get("numeric_id", None)
 
     # since calls are under the account endpoint, lets make it possible to CRUD calls from the account object
     def create_call(
         self,
-        call_data: dict,
-    ):
+        call_data: dict[str, Any],
+    ) -> Call:
         """
         Create a call.
         """
-        account_id = self.id
+        account_id: str = self.id
 
         if self.parent.request_delay:
             time.sleep(self.parent.request_delay)
@@ -80,33 +80,33 @@ class Account:
                 ]:
                     raise ValueError(f'Invalid key {dict_key} in call_data.')
 
-        call_json = self.parent._post(
+        call_json: dict[str, Any] = cast(dict[str, Any],self.parent._post(
             endpoint = 'a',
             path = f'/{account_id}/calls.json',
             data = call_data
-        )
+        ))
 
         return Call(call_json, parent=self)
     
     def list_calls(
         self,
-        company_id: str = None,
-        tracker_id: str = None,
+        company_id: Optional[str],
+        tracker_id: Optional[str],
         **kwargs
-    ):    # sourcery skip: remove-none-from-default-get
+    ) -> Union[Call,list[Call],None]:    # sourcery skip: remove-none-from-default-get
         """
         List calls for an account.
         """
-        account_id = self.id
+        account_id: str = self.id
 
-        pagination_type = kwargs.get('pagination_type', "RELATIVE")
+        pagination_type: str = kwargs.get('pagination_type', "RELATIVE")
 
         sorting: dict = kwargs.get('sorting', None)
         filtering: dict = kwargs.get('filtering', None)
         searching: dict = kwargs.get('searching', None)
         fields: dict = kwargs.get('fields', None)
 
-        params = {}
+        params: dict = {}
 
         if sorting:
             params |= sorting
@@ -127,7 +127,7 @@ class Account:
             path=f'/{account_id}/calls.json',
             params=params,
             response_data_key='calls',
-            pagination_type=pagination_type
+            pagination_type=pagination_type # type: ignore
         )
 
         if isinstance(calls, list) and len(calls) == 1:
@@ -136,38 +136,43 @@ class Account:
             return [Call(call, parent=self) for call in calls]
         elif isinstance(calls, dict):
             return Call(calls, parent=self)
+        else:
+            return None
     
     def get_call(
         self,
         call_id: str,
         **kwargs
-    ):
+    ) -> Union[dict[str, Any],Call,None]:
         """
         Get a call.
         """
-        obj_or_dict = kwargs.get('obj_or_dict', 'obj')
+        obj_or_dict: str = kwargs.get('obj_or_dict', 'obj')
 
-        account_id = self.id
+        account_id: str = self.id
 
         fields: dict = kwargs.get('fields', None)
 
-        params = {}
+        params: dict = {}
 
         if fields:
             params |= fields
 
-        call: dict = self.parent._get(
+        call: dict[str, Any] = cast(dict, self.parent._get(
             endpoint='a',
             path=f'/{account_id}/calls/{call_id}.json',
             params=params,
             response_data_key='call'
-        )
+        ))
 
         if obj_or_dict == 'dict':
             return call
         
         elif obj_or_dict == 'obj':
-            return Call(call, parent=self) if isinstance(call, dict) else None
+            return Call(call, parent=self)
+        
+        else:
+            return None
 
 
     ##############################
@@ -176,26 +181,26 @@ class Account:
 
     def list_tags(
             self,
-            company_id: str = None,
-            status: str = None,
-            tag_level: str = None,
+            company_id: Optional[str],
+            status: Optional[str],
+            tag_level: Optional[str],
             **kwargs
-    ):
+    ) -> Union[Tag,list[Tag],None]:
         """
         List tags for an account.
         """
-        account_id = self.id
+        account_id: str = self.id
 
         if self.parent.request_delay:
             time.sleep(self.parent.request_delay)
         
-        sorting = kwargs.get('sorting', None)
+        sorting: Union[dict[str, Any], None] = kwargs.get('sorting', None)
 
 
-        params = {}
+        params: dict = {}
         
         if sorting:
-            params |= sorting
+            params |= sorting 
         if company_id:
             params['company_id'] = company_id
         if status:
@@ -217,19 +222,19 @@ class Account:
             return [Tag(tag, parent=self) for tag in tags]
         
         elif isinstance(tags, dict):
-            return Tag(tags, parent=self)
+            return Tag(cast(dict,tags), parent=self)
 
         else:
             return None
 
     def create_tag(
             self,
-            data: dict,
-    ):
+            data: dict[str, Any],
+    ) -> Tag:
         """
         Create a tag.
         """
-        account_id = self.id
+        account_id: str = self.id
 
         if self.parent.request_delay:
             time.sleep(self.parent.request_delay)
@@ -243,11 +248,11 @@ class Account:
                 raise ValueError(f'Data must include {key}.')
     
 
-        tag_json = self.parent._post(
+        tag_json: dict[str, Any] = cast(dict[str, Any], self.parent._post(
             endpoint='a',
             path=f'/{account_id}/tags.json',
             data=data
-        )
+        ))
 
         return Tag(tag_json, parent=self)
     
@@ -304,31 +309,33 @@ class Account:
             self,
             company_id: str,
             **kwargs
-    ):
+    ) -> Union[dict[str, Any], Company, None]:
         
         if self.parent.request_delay:
             time.sleep(self.parent.request_delay)
         
-        account_id = self.id
+        account_id: str = self.id
 
-        obj_or_dict = kwargs.get('obj_or_dict', 'obj')
+        obj_or_dict: str = kwargs.get('obj_or_dict', 'obj')
         """ONLY SPECIFY IF YOU WANT A DICT BACK INSTEAD OF AN OBJECT - USED INTERNALLY TO REFRESH OBJECTS WITHOUT CREATING A NEW OBJECT"""
 
-        company: dict = self.parent._get(
+        company: dict = cast(dict,self.parent._get(
             endpoint='a',
             path=f'/{account_id}/companies/{company_id}.json'
-        )
+        ))
 
         if obj_or_dict == 'dict':
             return company
         
         elif obj_or_dict == 'obj':
-            return Company(company, parent=self) if isinstance(company, dict) else None
+            return Company(company, parent=self)
+        else:
+            return None
         
     def create_company(
             self,
             data: dict
-    ):
+    ) -> Company:
         """
         Create a company.
         """
@@ -346,11 +353,11 @@ class Account:
                 raise ValueError(f'Data must include {key}.')
     
 
-        company_json: dict = self.parent._post(
+        company_json: dict = cast(dict,self.parent._post(
             endpoint='a',
             path=f'/{account_id}/companies.json',
             data=data
-        )
+        ))
 
         return Company(company_json, parent=self)
     
@@ -361,21 +368,21 @@ class Account:
     def list_form_submissions(
             self,
             **kwargs
-    ):  # sourcery skip: remove-none-from-default-get
+    ) -> Union[list[FormSubmission], FormSubmission, None]:  # sourcery skip: remove-none-from-default-get
         """
         List form submissions for an account.
         """
-        account_id = self.id
+        account_id: str = self.id
 
         if self.parent.request_delay:
             time.sleep(self.parent.request_delay)
         
-        sorting = kwargs.get('sorting', None)
-        filtering = kwargs.get('filtering', None)
-        fields = kwargs.get('fields', None)
+        sorting: dict = kwargs.get('sorting', None)
+        filtering: dict = kwargs.get('filtering', None)
+        fields: dict = kwargs.get('fields', None)
 
 
-        params = {}
+        params: dict = {}
         
         if sorting:
             params |= sorting
@@ -392,13 +399,13 @@ class Account:
         )
 
         if isinstance(form_submissions, list) and len(form_submissions) > 1:
-            return [FormSubmission(form_submission, parent=self) for form_submission in form_submissions]
+            return [FormSubmission(data=form_submission, parent=self) for form_submission in form_submissions]
         
         elif isinstance(form_submissions, list) and len(form_submissions) == 1:
-            return FormSubmission(form_submissions[0], parent=self)
+            return FormSubmission(data=form_submissions[0], parent=self)
         
         elif isinstance(form_submissions, dict):
-            return FormSubmission(form_submissions, parent=self)
+            return FormSubmission(data=cast(dict,form_submissions), parent=self)
         
         else:
             return None
@@ -406,11 +413,11 @@ class Account:
     def create_form_submission(
             self,
             data: dict
-    ):
+    ) -> FormSubmission:
         """
         Create a form submission.
         """
-        account_id = self.id
+        account_id: str = self.id
 
         if self.parent.request_delay:
             time.sleep(self.parent.request_delay)
@@ -429,13 +436,13 @@ class Account:
                 raise ValueError(f'Data must include {key}.')
     
 
-        form_submission_json = self.parent._post(
+        form_submission_json: dict[str, Any] = cast(dict, self.parent._post(
             endpoint='a',
             path=f'/{account_id}/form_submissions.json',
             data=data
-        )
+        ))
 
-        return FormSubmission(form_submission_json, parent=self)
+        return FormSubmission(data=form_submission_json, parent=self)
     
     def ignore_form_fields(
             self,
@@ -473,24 +480,24 @@ class Account:
             self,
             company_id: str,
             **kwargs
-    ):
+    ) -> Union[list[TextMessageThread], TextMessageThread, None]:
         """
         List text message threads for an account.
         """
-        account_id = self.id
+        account_id: str = self.id
 
         if self.parent.request_delay:
             time.sleep(self.parent.request_delay)
         
-        searching = kwargs.get('searching', None)
-        filtering = kwargs.get('filtering', None)
-        fields = kwargs.get('fields', None)
+        searching: Union[dict, None] = kwargs.get('searching', None)
+        filtering: Union[dict, None] = kwargs.get('filtering', None)
+        fields: Union[dict, None] = kwargs.get('fields', None)
 
 
-        params = {}
+        params: dict = {}
         
         if searching:
-            params |= sorting
+            params |= searching
         if filtering:
             params |= filtering
         if fields:
@@ -504,11 +511,11 @@ class Account:
         )
 
         if isinstance(text_message_threads, list) and len(text_message_threads) > 1:
-            return [TextMessageThread(text_message_thread, parent=self) for text_message_thread in text_message_threads]
-        if isinstance(text_message_threads, list) and len(text_message_threads) == 1:
-            return TextMessageThread(text_message_threads[0], parent=self)
-        if isinstance(text_message_threads, dict):
-            return TextMessageThread(text_message_threads, parent=self)
+            return [TextMessageThread(data=text_message_thread, parent=self) for text_message_thread in text_message_threads]
+        elif isinstance(text_message_threads, list) and len(text_message_threads) == 1:
+            return TextMessageThread(data=text_message_threads[0], parent=self)
+        elif isinstance(text_message_threads, dict):
+            return TextMessageThread(data=cast(dict,text_message_threads), parent=self)
         else:
             return None
         
@@ -516,29 +523,29 @@ class Account:
         self,
         thread_id: str,
         **kwargs
-    ):
+    ) -> TextMessageThread:
         """
         Get a text message thread.
         """
 
-        account_id = self.id
-        fields = kwargs.get('fields', None)
+        account_id: str = self.id
+        fields: Union[dict, None] = kwargs.get('fields', None)
 
         if self.parent.request_delay:
             time.sleep(self.parent.request_delay)
         
-        params = {}
+        params: dict = {}
 
         if fields:
             params |= fields
 
-        text_message_thread = self.parent._get(
+        text_message_thread: dict[str, Any] = cast(dict[str, Any], self.parent._get(
             endpoint='a',
             path = f'/{account_id}/text-messages/{thread_id}.json',
             params=params
-        )
+        ))
 
-        return TextMessageThread(text_message_thread, parent=self)
+        return TextMessageThread(data=text_message_thread, parent=self)
 
     ##############################
     # Trackers
@@ -547,11 +554,11 @@ class Account:
     def list_trackers(
             self,
             **kwargs
-    ) -> List[Tracker] | None:
+    ) -> Union[list[Tracker], Tracker, None]:
         """
         List trackers for an account.
         """
-        params = {
+        params: dict[str, Any] = {
             key: value
             for key, value in kwargs.items()
             if key in ['fields', 'sorting', 'filtering', 'searching']
@@ -567,13 +574,20 @@ class Account:
             response_data_key='trackers'
         )
 
-        return [Tracker(self, tracker) for tracker in trackers] if trackers else None
+        if isinstance(trackers, list) and len(trackers) > 1:
+            return [Tracker(data=tracker, parent=self) for tracker in trackers]
+        elif isinstance(trackers, list) and len(trackers) == 1:
+            return Tracker(data=trackers[0], parent=self)
+        elif isinstance(trackers, dict):
+            return Tracker(data=cast(dict,trackers), parent=self)
+        else:
+            return None
 
     def get_tracker(
             self,
             tracker_id: str,
             **kwargs
-    ) -> Tracker | None:
+    ) -> Union[Tracker, None]:
         """
         Get a tracker.
         """
@@ -592,11 +606,11 @@ class Account:
             params=params
         )
 
-        return Tracker(self, tracker) if tracker else None
+        return Tracker(self, cast(dict[str, Any],tracker)) if tracker else None
 
 ######################################################
 
-    def __dict__(self) -> Dict[str, Any]:
+    def __dict__(self) -> Dict[str, Any]: # type: ignore+
         if self.numeric_id is not None:
             return {
                 "id": self.id,
