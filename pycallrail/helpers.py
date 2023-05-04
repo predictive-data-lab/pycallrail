@@ -1,18 +1,18 @@
+from urllib.parse import urljoin
 import typing
-import functools
+def build_url(base_url: str, endpoint: str, path: typing.Optional[str] = None ) -> str:
+    
+    url_result: str = urljoin(base_url, endpoint)
 
-# create a decorator to type check classes
-def type_checked(cls) -> object:
-    """
-    A decorator to type check a class.
-    """
-    orig_init = cls.__init__
-    def new_init(self, *args, **kwargs):
-        for attr_name, attr_value in kwargs.items():
-            attr_type = typing.get_type_hints(cls).get(attr_name)
-            if attr_type and not isinstance(attr_value, attr_type):
-                raise TypeError(f"{cls.__name__}.{attr_name} must be of type {attr_type}")
-            setattr(self, attr_name, attr_value)
-        orig_init(self, *args, **kwargs)
-    cls.__init__ = new_init
-    return cls
+    if path:
+        # Ensure the endpoint has a trailing slash
+        if not url_result.endswith('/'):
+            url_result += '/'
+
+        # Ensure the path doesn't have a leading slash
+        if path.startswith('/'):
+            path = path[1:]
+
+        url_result: str = urljoin(url_result, path) # type: ignore
+
+    return url_result

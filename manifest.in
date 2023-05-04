@@ -1,3 +1,0 @@
-include *.txt *.md *.py
-recursive-include examples *.png *.py *.dist
-recursive-include  *.py *.crt *.png

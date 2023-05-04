@@ -1,310 +1,324 @@
-import asyncio
-import ujson
-import logging
-import threading
-import time
-from dataclasses import dataclass
-from typing import Optional, Union, Iterable, cast
-from urllib.parse import urljoin, urlencode
-
-import aiohttp
+from __future__ import with_statement, print_function, absolute_import, annotations
 import requests
-import enum
+import typing
+import collections
 
-from pycallrail.api.accounts import Account
-from pycallrail.api.call import Call
+from pycallrail.objects.accounts import Account
+from pycallrail.helpers import build_url
 
-from pycallrail.exceptions import BaseCallRailException
+class CallRail(object):
+    """Base class for CallRail API access"""
 
-BASE_URL = "https://api.callrail.com/v3/"
-
-ERROR_CODES: dict[int, str] = {
-    200: "OK - The request was succeeded.",
-    201: "Created - The request was succeeded and a resource was created.",
-    204: "No Content - The request was succeeded but there is no content to return.",
-    400: "Bad Request - The request was malformed or missing a required parameter.",
-    401: "Unauthorized - The API key is invalid.",
-    403: "Forbidden - The API key does not have permission to access the requested resource.",
-    404: "Not Found - The requested resource could not be found.",
-    405: "Method Not Allowed - The requested method is not supported for the specified resource.",
-    406: "Not Acceptable - The requested resource is only capable of generating content not acceptable according to the Accept headers sent in the request.",
-    422: "Unprocessable Entity - The request was well-formed but was unable to be followed due to semantic errors.",
-    429: "Too Many Requests - The API key has exceeded the rate limit.",
-    500: "Internal Server Error - We had a problem with our server. Try again later.",
-    503: "Service Unavailable - We're temporarily offline for maintenance. Please try again later."
-}
-
-class PaginationType(enum.Enum):
-    """
-    The type of pagination to use.
-    """
-    RELATIVE = "relative"
-    OFFSET = "offset"
-
-class CallRail():
-    logger: logging.Logger = logging.getLogger(__name__)
-    
     def __init__(
-            self,
-            api_key: str,
-            logging_level: int = logging.INFO,
-            request_delay: Optional[Union[float,int]] = None,
-            proxy: Optional[str] = None,
-            **kwargs
-    ) -> None:
+            self, 
+            api_key: str, 
+            proxies: typing.Optional[collections.MutableMapping[str, str]] = None, 
+            default_pagination_type: typing.Optional[str] = 'relative'
+        ) -> None:
         """
+        Constructor
         
-        The main class for the CallRail API. Allows for prgrammatic access to the CallRail API.
-        
-        ### Parameters:
-        - 'api_key': The API key for the CallRail account.
-        - 'logging_level': The logging level. Defaults to logging.INFO.
-        - 'request_delay': The delay between requests. Defaults to None.
-        - 'proxy': The proxy to use for requests. Defaults to None.
-        - 'kwargs': Additional keyword arguments.
+        :api_key: API Key for the CallRail Account.
+        :proxies: Set of proxies to use.
         """
-        self.logger.setLevel(logging_level)
-        self.api_key = api_key
-        self.request_delay = request_delay
-        self.proxy = proxy
-        for key, value in kwargs.items():
-            setattr(self, key, value)
+        if api_key is None:
+            raise ValueError('API key is required')
+        self.BASE_URL: str = 'https://api.callrail.com/v3/'
+        self.api_key: str = api_key
+        self.proxies: typing.Union[collections.MutableMapping[str, str], None] = proxies
         
-        self.auth_header = {
-            'Authorization': f'Token token={self.api_key}'
+        self.session: requests.Session = requests.Session()
+        
+        if proxies is not None:
+            self.session.proxies = typing.cast(collections.MutableMapping[str, str], proxies)
+
+        self.auth_header: collections.Mapping[str, str] = {
+            "Authorization": f'Token token="{self.api_key}"'
         }
 
-        self.base_relative_pagination_params = {
-            'relative_pagination': 'true'
-        }
+        self.session.headers.update(self.auth_header)
 
+        if default_pagination_type == 'relative':
+            self.default_pagination_param: collections.MutableMapping[str, str] = {
+                'relative_pagination': 'true'
+            }
+
+    
     def _relative_paginator(
             self,
             response: requests.Response,
-            response_data_key: Optional[str] = None
-    ) -> Iterable:
+            response_data_key: typing.Optional[str] = None
+    ) -> typing.List[typing.Dict[str, typing.Any]]:
         """
-        Base relative pagination function for the CallRail API.
+        Paginate through API responses using relative pagination
+        
+        :response: Response object
+        :response_data_key: Key to use for response data
         """
-        pagination_list = []
+
+        result_bag: list[None] = []
+
         while True:
             try:
-                pagination_list.extend(response.json()[response_data_key])
+                result_bag.extend(response.json()[response_data_key])
             except KeyError:
                 break
             if "next_page" not in response.json() \
                 or "has_next_page" not in response.json() \
-                      or response.json()["has_next_page"] is False:
+                    or response.json()['has_next_page'] is False:
                 break
             try:
-                response = requests.get(
-                    response.json()["next_page"],
-                    headers=self.auth_header,
-                    params=self.base_relative_pagination_params)
+                response = self.session.get(
+                    url=response.json()['next_page'],
+                    params=self.default_pagination_param
+                )
                 response.raise_for_status()
-            except requests.HTTPError as e:
-                raise BaseCallRailException(
-                    message=f"BASE ERROR {e.errno}",
-                    status_code=response.status_code,
-                    response=response.json(),
-                    headers=response.headers
-                ) from e
             except Exception as e:
                 raise e
-        return pagination_list
-    
+        
+        return typing.cast(typing.List[typing.Dict[str, typing.Any]], result_bag)
+
     def _offset_paginator(
             self,
             response: requests.Response,
-            response_data_key: Optional[str] = None
-    ) -> Iterable :
+            response_data_key: typing.Optional[str] = None
+    ) -> typing.List[typing.Dict[str, typing.Any]]:
         """
-        Base offset pagination function for the CallRail API.
+        Paginate through API responses using offset pagination
+        
+        :response: Response object
+        :response_data_key: Key to use for response data
         """
-        pagination_list: list[None] = []
+
+        result_bag: list[None] = []
+        
         current_page: int = response.json()['page']
         total_pages: int = response.json()['total_pages']
 
         while True:
             try:
-                pagination_list.extend(response.json()[response_data_key])
+                result_bag.extend(response.json()[response_data_key])
             except KeyError:
                 break
             if current_page == total_pages:
                 break
             try:
-                response = requests.get(
-                    f'{response.url}?page={current_page+1}',
+                response = self.session.get(
+                    url=f'{response.url}',
+                    params={'page': current_page + 1},
                     headers=self.auth_header
                 )
                 response.raise_for_status()
-            except requests.HTTPError as e:
-                raise BaseCallRailException(
-                    message=f"BASE ERROR {e.errno}",
-                    status_code=response.status_code,
-                    response=response.json(),
-                    headers=response.headers
-                ) from e
             except Exception as e:
                 raise e
             current_page = response.json()['page']
-        return pagination_list
+
+        return typing.cast(typing.List[typing.Dict[str, typing.Any]], result_bag)
     
     def _get(
             self,
-            endpoint: Optional[str] = None,
-            path: Optional[str] = None,
-            params: Optional[dict] = None,
-            response_data_key: Optional[str] = None,
-            pagination_type: Optional[PaginationType] = PaginationType.OFFSET
-    ) -> Union[Iterable[dict],dict,None]:
-
+            endpoint: str,
+            response_data_key: typing.Optional[str] = None,
+            path: typing.Optional[str] = None,
+            params: typing.Optional[typing.MutableMapping[str, typing.Any]] = None,
+            pagination_type: typing.Optional[str] = 'OFFSET'
+    ) -> typing.Union[typing.List[typing.Dict[str, typing.Any]], typing.Dict[str, typing.Any], None]:
         """
-        Base GET request function for the CallRail API.
+        Make a GET request to the CallRail API.
+        
+        :endpoint: API endpoint
+        :path: API path
+        :params: Query string parameters
+        :response_data_key: Key to use for response data
         """
-        if self.request_delay:
-            time.sleep(self.request_delay)
-        url: str = urljoin(BASE_URL, endpoint)
-        print(url)
         if path:
-            url = f'{url}{path}'
+            url: str = build_url(
+                base_url=self.BASE_URL,
+                endpoint=endpoint,
+                path=path
+            )
+        else:
+            url = build_url(
+                base_url=self.BASE_URL,
+                endpoint=endpoint
+            )
+
         if params:
-            first_response: requests.Response = requests.get(
-                url,
-                headers=self.auth_header,
+            if pagination_type == 'RELATIVE':
+                params.update(self.default_pagination_param)
+            first_response: requests.Response = self.session.get(
+                url=url,
                 params=params
             )
         else:
-            first_response = requests.get(
-                url,
-                headers=self.auth_header
-            )
+            if pagination_type == 'RELATIVE':
+                first_response: requests.Response = self.session.get( # type: ignore
+                    url=url,
+                    params=self.default_pagination_param
+                )
+            else:
+                first_response: requests.Response = self.session.get( # type: ignore
+                    url=url
+                )
+
         first_response.raise_for_status()
 
-        # check if pagination is needed
-        if "page" not in first_response.json() \
-            or "next_page" not in first_response.json():
-            try:
-                return first_response.json()[response_data_key]
-            except KeyError:
-                return first_response.json()
-
-        if pagination_type == PaginationType.RELATIVE:
-            return self._relative_paginator(
-                response=first_response,
-                response_data_key=response_data_key
-            )
-        elif pagination_type == PaginationType.OFFSET:
+        if pagination_type == 'OFFSET':
             return self._offset_paginator(
                 response=first_response,
                 response_data_key=response_data_key
             )
+        elif pagination_type == 'RELATIVE':
+            return self._relative_paginator(
+                response=first_response,
+                response_data_key=response_data_key
+            )
+        
         else:
-            return first_response.json()[response_data_key]
+            return first_response.json()
         
     def _post(
             self,
-            endpoint: Optional[str] = None,
-            path: Optional[str] = None,
-            data: Optional[dict] = None,
-            response_data_key: Optional[str] = None
-    ) -> Union[Iterable[dict],dict,None]:
+            endpoint: str,
+            path: typing.Optional[str] = None,
+            data: typing.Optional[typing.MutableMapping[str, typing.Any]] = None,
+            response_data_key: typing.Optional[str] = None
+    ) -> typing.Union[typing.List[typing.Dict[str, typing.Any]], typing.Dict[str, typing.Any], None]:
         """
-        Base POST request function for the CallRail API.
+        Make a POST request to the CallRail API.
+        
+        :endpoint: API endpoint
+        :path: API path
+        :data: JSON data to send
+        :response_data_key: Key to use for response data
         """
-        url: str = self._extracted_from__delete_11(endpoint, path)
-        if data:
-            response: requests.Response = requests.post(
-                url,
-                headers=self.auth_header,
-                data=data
+        if path:
+            url: str = build_url(
+                base_url=self.BASE_URL,
+                endpoint=endpoint,
+                path=path
             )
         else:
-            response = requests.post(
-                url,
-                headers=self.auth_header
+            url = build_url(
+                base_url=self.BASE_URL,
+                endpoint=endpoint
             )
-        response.raise_for_status()
-        return response.json()
+
+        if data:
+            first_response: requests.Response = self.session.post(
+                url=url,
+                json=data
+            )
+        else:
+            first_response: requests.Response = self.session.post( # type: ignore
+                url=url
+            )
+        
+        first_response.raise_for_status()
+        return first_response.json()[response_data_key] if response_data_key else first_response.json()
     
     def _put(
             self,
             endpoint: str,
-            path: Optional[str] = None,
-            data: Optional[dict] = None,
-            response_data_key: Optional[str] = None
-    ) -> Union[Iterable[dict], dict, None]:
+            path: typing.Optional[str],
+            data: typing.Optional[typing.MutableMapping[str, typing.Any]],
+            response_data_key: typing.Optional[str] = None,
+            params: typing.Optional[typing.Mapping[str, typing.Any]] = None
+    ) -> typing.Union[typing.List[typing.Dict[str, typing.Any]], typing.Dict[str, typing.Any], None]:
         """
-        Base PUT request function for the CallRail API.
+        Make a PUT request to the CallRail API.
+
+        :endpoint: API endpoint
+        :path: API path
+        :data: JSON data to send
+        :response_data_key: Key to use for response data
         """
-        url: str = self._extracted_from__delete_11(endpoint, path)
-        if data:
-            response: requests.Response = requests.put(
-                url,
-                headers=self.auth_header,
-                data=data
+        if path:
+            url: str = build_url(
+                base_url=self.BASE_URL,
+                endpoint=endpoint,
+                path=path
             )
         else:
-            response = requests.put(
-                url,
-                headers=self.auth_header
+            url = build_url(
+                base_url=self.BASE_URL,
+                endpoint=endpoint
             )
+        
+        if data and params:
+            response: requests.Response = self.session.put(
+                url=url,
+                json=data,
+                params=params
+            )
+        elif data:
+            response: requests.Response = self.session.put( # type: ignore
+                url=url,
+                json=data
+            )
+        elif params:
+            response: requests.Response = self.session.put( # type: ignore
+                url=url,
+                params=params
+            )
+        else:
+            response: requests.Response = self.session.put( # type: ignore
+                url=url
+            )
+            
         response.raise_for_status()
-        return response.json()
-    
 
+        return response.json()[response_data_key] if response_data_key else response.json()
+    
     def _delete(
             self,
             endpoint: str,
-            path: Optional[str] = None,
-            response_data_key: Optional[str] = None
+            path: typing.Optional[str] = None,
+            response_data_key: typing.Optional[str] = None
     ) -> None:
         """
-        Base DELETE request function for the CallRail API.
+        Make a DELETE request to the CallRail API.
+
+        endpoint: API endpoint
+        :path: API path
+        :response_data_key: Key to use for response data
         """
-        url: str = self._extracted_from__delete_11(endpoint, path)
-        response: requests.Response = requests.delete(
-            url,
-            headers=self.auth_header
+        if path:
+            url: str = build_url(
+                base_url=self.BASE_URL,
+                endpoint=endpoint,
+                path=path
+            )
+        else:
+            url = build_url(
+                base_url=self.BASE_URL,
+                endpoint=endpoint
+            )
+            
+        
+        response: requests.Response = self.session.delete(
+            url=url
         )
         response.raise_for_status()
 
-    # TODO Rename this here and in `_post`, `_put` and `_delete`
-    def _extracted_from__delete_11(self, endpoint, path) -> str:
-        if self.request_delay:
-            time.sleep(self.request_delay)
-        result: str = urljoin(BASE_URL, endpoint)
-
-        if path:
-            # Ensure the endpoint has a trailing slash
-            if not result.endswith('/'):
-                result += '/'
-
-            # Ensure the path does not start with a slash
-            if path.startswith('/'):
-                path = path[1:]
-
-            result = urljoin(result, path)
-
-        return result        
-    ##############################
+    #########################
     # Accounts
-    ##############################
-
+    #########################
 
     def list_accounts(
             self,
             **kwargs
-    ) -> Union[list[Account], Account]:  # sourcery skip: remove-none-from-default-get
+    ) -> typing.List[Account]:
         """
-        List all accounts for the authenticated user.
+        List accounts for the authenticated user.
         """
-        sorting: dict = kwargs.get('sorting', None)
-        filtering: dict = kwargs.get('filtering', None)
-        searching: dict = kwargs.get('searching', None)
-        fields: dict = kwargs.get('fields', None)
 
-        params: dict = {}
+        sorting: typing.Optional[collections.MutableMapping[str, typing.Any]] = kwargs.get('sorting', None)
+        filtering: typing.Optional[collections.MutableMapping[str, typing.Any]] = kwargs.get('filtering', None)
+        searching: typing.Optional[collections.MutableMapping[str, typing.Any]] = kwargs.get('searching', None)
+        fields: typing.Optional[collections.MutableMapping[str, typing.Any]] = kwargs.get('fields', None)
+
+        params: dict[str, typing.Any] = {}
 
         if sorting:
             params |= sorting
@@ -315,44 +329,36 @@ class CallRail():
         if fields:
             params |= fields
 
-        accounts = self._get(
-            params=params,
-            endpoint = 'a',
-            path = '.json',
+        response: typing.List[typing.Dict[str, typing.Any]] = typing.cast(typing.List[typing.Dict[str, typing.Any]], self._get(
+            endpoint='a.json',
             response_data_key='accounts',
-            pagination_type= PaginationType.OFFSET
-        )
+            params=params
+        ))
 
-        # If the response is a list, return a list of Account objects.
-        if isinstance(accounts, list) and len(accounts) > 1:
-            return [Account(account, parent=self) for account in accounts]
-        elif isinstance(accounts, list) and len(accounts) == 1:
-            return Account(accounts[0], parent=self)
-        # If the response is a dict, return a single Account object.
-        elif isinstance(accounts, dict) and accounts != {}:
-            return Account(accounts, parent=self)
-        else:
-            raise AttributeError('No accounts found')
-        
+        return [Account.from_json(api_client=self, json_data=account) for account in response]
+    
     def get_account(
             self,
             account_id: str,
             **kwargs
     ) -> Account:
         """
-        Get a single account.
+        Get an account by ID.
         """
-        fields: dict = kwargs.get('fields', None)
-
-        params: dict = {}
+        fields: typing.Optional[collections.MutableMapping[str, typing.Any]] = kwargs.get('fields', None)
+        params: dict[str, typing.Any] = {}
 
         if fields:
             params |= fields
 
-        return Account(
-                cast(dict,self._get(
-                    endpoint = 'a',
-                    path = f'/{account_id}.json',
-                    response_data_key='account'
-                )),
-            parent=self)
+        return Account.from_json(
+            api_client=self, 
+            json_data=typing.cast(typing.Dict[str, typing.Any],self._get(
+                endpoint='a',
+                response_data_key='accounts',
+                path=f'/{account_id}.json',
+                params=params,
+                pagination_type='NONE'
+            ))
+        )
+    
