@@ -76,7 +76,7 @@ setup(
     python_requires='>=3.8.0',
     classifiers=[
         'Development Status :: 5 - Production/Stable',
-        'License :: MIT License',
+        'License :: OSI Approved :: MIT License',
         'Intended Audience :: Developers',
         'Natural Language :: English',
         'Operating System :: OS Independent',
