@@ -6,3 +6,5 @@ dist
 *.vscode
 *.pytest_cache
 *.mypy_cache
+*.env
+*cfg.py
