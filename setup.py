@@ -35,7 +35,7 @@ with open('README.rst') as f:
 extras_require = {
     'docs': [
         'sphinx==4.4.0',
-        'sphinxcontrib_trio==0.2.0'
+        'sphinxcontrib_trio==0.2.0',
         'sphinxcontrib-websupport',
         'typing-extensions>=4.3.0'
     ],
@@ -43,7 +43,7 @@ extras_require = {
         'coverage[toml]',
         'pytest',
         'pytest-mock',
-        'pytest-cov'
+        'pytest-cov',
         'typing-extensions>=4.3.0',
         'requests_mock',
         'typeguard'
