@@ -4,6 +4,9 @@ on:
   push:
   pull_request:
     types: [opened, synchronize, reopened]
+
+env:
+  CALLRAIL_API_KEY: ${{ secrets.CALLRAIL_API_KEY }}
   
 jobs:
   pytest:
