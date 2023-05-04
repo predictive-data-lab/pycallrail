@@ -35,7 +35,7 @@ with open('README.rst') as f:
 extras_require = {
     'docs': [
         'sphinx==4.4.0',
-        'sphinxcontrib_trio==0.2.0',
+        'sphinxcontrib_trio',
         'sphinxcontrib-websupport',
         'typing-extensions>=4.3.0'
     ],
