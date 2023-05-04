@@ -46,7 +46,8 @@ extras_require = {
         'pytest-cov',
         'typing-extensions>=4.3.0',
         'requests_mock',
-        'typeguard'
+        'typeguard',
+        'python-dateutil'
     ]
 }
 
