@@ -2,7 +2,6 @@ from __future__ import with_statement, print_function, absolute_import, annotati
 import requests
 import typing
 import collections
-from urllib.parse import urljoin
 
 from pycallrail.objects.accounts import Account
 from pycallrail.helpers import build_url
