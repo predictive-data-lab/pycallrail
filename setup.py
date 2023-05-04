@@ -52,7 +52,7 @@ extras_require = {
 
 packages = [
     'pycallrail'
-    'pycallrail.objects'
+    '.objects'
 ]
 
 setup(
