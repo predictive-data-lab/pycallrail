@@ -371,7 +371,7 @@ def test_list_text_message_conversations(mocker: pytest_mock.MockerFixture) -> N
     api_client = CallRail('test_key')
     account = Account(api_client, 'test_id', 'test_name', True, False)
     expected_url = f'a/{account.id}'
-    expected_path = f'text_messages.json'
+    expected_path = f'text-messages.json'
     expected_data = [
     {
       "id": "KZaGR",
