@@ -18,17 +18,17 @@ jobs:
     - uses: actions/checkout@v3
       with:
         fetch-depth: 0
-
-      - name: Setup Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python-version }}
       
-      - name: Install dependencies
-        run: |
-          python -m pip install -e .[test]
+    - name: Setup Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
       
-      - name: Run tests
-        shell: bash
-        run: |
-          pytest -vs --cov=pycallrail --cov-report term-missing:skip-covered 
+    - name: Install dependencies
+      run: |
+        python -m pip install -e .[test]
+      
+    - name: Run tests
+      shell: bash
+      run: |
+        pytest -vs --cov=pycallrail --cov-report term-missing:skip-covered
