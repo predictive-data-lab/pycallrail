@@ -45,4 +45,4 @@ jobs:
       - name: Install package
         run: |
           pip install -e .[docs,tests]
-
+      
