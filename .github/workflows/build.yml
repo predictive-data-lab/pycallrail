@@ -46,17 +46,3 @@ jobs:
         run: |
           pip install -e .[docs,tests]
 
-      - name: Build docs
-        shell: bash
-        run: |
-          cd docs
-          sphinx-build -b html -D language=${DOCS_LANGUAGE} -j auto -a -n -T -W --keep-going . _build/html
-        env:
-          DOCS_LANGUAGE: ${{ matrix.language }}
-
-      - name: Upload docs
-        uses: actions/upload-artifact@v2
-        if: always()
-        with:
-          name: docs-${{ matrix.language }}
-          path: docs/_build/html/*

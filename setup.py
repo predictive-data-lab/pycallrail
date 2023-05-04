@@ -82,8 +82,8 @@ setup(
         'Operating System :: OS Independent',
         'Programming Language :: Python',
         'Topic :: Software Development :: Libraries :: Python Modules',
-        'Topic :: Utilities'
+        'Topic :: Utilities',
         'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
-        'Topic :: Marketing'
+        'Topic :: Communications'
     ]
 )
