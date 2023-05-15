@@ -13,19 +13,19 @@ __title__ = 'pycallrail'
 __author__ = 'Engineering @ Predictive Data Lab'
 __license__ = 'MIT'
 __copyright__ = 'Copyright 2023 by Predictive Data Lab'
-__version__ = '0.9.0.0'
+__version__ = '0.9.0.1'
 
 __path__ = __import__('pkgutil').extend_path(__path__, __name__)
 
 import logging
 from typing import NamedTuple, Literal
 
-from .callrail import *
-from .base import *
-from .errors import *
-from .helpers import *
-from .mixins import *
-from .objects import *
+from callrail import *
+from base import *
+from errors import *
+from helpers import *
+from mixins import *
+from objects import *
 
 class VersionInfo(NamedTuple):
     major: int

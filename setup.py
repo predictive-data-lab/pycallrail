@@ -51,10 +51,7 @@ extras_require = {
     ]
 }
 
-packages = [
-    'pycallrail'
-    '.objects'
-]
+
 
 setup(
     name='pycallrail',
@@ -65,7 +62,7 @@ setup(
         'Issue Tracker': 'https://github.com/predictive-data-lab/pycallrail/issues'
     },
     version=version,
-    packages=packages,
+    packages=['pycallrail', 'pycallrail.objects'],
     license='MIT',
     description='An unofficial Python wrapper for the CallRail API',
     long_description=readme,
